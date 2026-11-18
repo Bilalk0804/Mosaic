@@ -29,10 +29,36 @@ def active_flashcards():
 
 
 def feed_eligible_flashcards():
-    """Cards the public feed may serve: active, with an active verified canonical claim."""
+    """Cards the public feed may serve: active, with an active verified canonical claim and public environment."""
     return active_flashcards().filter(
+        environment=Flashcard.ENVIRONMENT_PUBLIC,
         source_claim__isnull=False,
         source_claim__is_active=True,
+    )
+
+
+def personal_feed_eligible_flashcards(user):
+    """Cards the personal feed may serve for an owner."""
+    if not user or not user.is_authenticated:
+        return Flashcard.objects.none()
+    return active_flashcards().filter(
+        environment=Flashcard.ENVIRONMENT_PERSONAL,
+        owner=user,
+    )
+
+
+def user_feed_eligible_flashcards(user):
+    """Public feed cards plus personal cards owned by the authenticated user."""
+    return feed_eligible_flashcards() | personal_feed_eligible_flashcards(user)
+
+
+def accessible_flashcards(user):
+    """Cards accessible by the given user: public cards or owned personal cards."""
+    if not user or not user.is_authenticated:
+        return active_flashcards().filter(environment=Flashcard.ENVIRONMENT_PUBLIC)
+    return active_flashcards().filter(
+        Q(environment=Flashcard.ENVIRONMENT_PUBLIC)
+        | Q(environment=Flashcard.ENVIRONMENT_PERSONAL, owner=user)
     )
 
 
@@ -59,6 +85,11 @@ class FlashcardFeedView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
+        env = self.request.query_params.get("environment", Flashcard.ENVIRONMENT_PUBLIC)
+        if env == Flashcard.ENVIRONMENT_PERSONAL:
+            return personal_feed_eligible_flashcards(self.request.user)
+        if env == "all":
+            return user_feed_eligible_flashcards(self.request.user)
         return feed_eligible_flashcards()
 
     def list(self, request, *args, **kwargs):
@@ -145,7 +176,8 @@ class FlashcardFeedView(generics.ListAPIView):
             buckets = {}
             for card in cards:
                 if card.feed_tier == tier:
-                    buckets.setdefault(card.source_claim.concept_id, []).append(card)
+                    concept_key = card.source_claim.concept_id if card.source_claim else "uncategorized"
+                    buckets.setdefault(concept_key, []).append(card)
             queues = list(buckets.values())
             while queues:
                 for queue in list(queues):
@@ -153,6 +185,13 @@ class FlashcardFeedView(generics.ListAPIView):
                     if not queue:
                         queues.remove(queue)
         return ordered
+
+
+class PersonalFlashcardFeedView(FlashcardFeedView):
+    """Dedicated endpoint for personal-environment flashcards."""
+
+    def get_queryset(self):
+        return personal_feed_eligible_flashcards(self.request.user)
 
 
 class TopicSearchView(APIView):
@@ -242,7 +281,7 @@ class FlashcardDetailView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def get_queryset(self):
-        return active_flashcards()
+        return accessible_flashcards(self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -267,7 +306,7 @@ class FlashcardViewedView(APIView):
     permission_classes = [permissions.IsAuthenticated, IsProfileComplete]
 
     def post(self, request, pk):
-        flashcard = get_object_or_404(active_flashcards(), pk=pk)
+        flashcard = get_object_or_404(accessible_flashcards(request.user), pk=pk)
         record_flashcard_view(request.user, flashcard)
         try:
             session_id = UUID(request.data.get("session_id"))
@@ -295,7 +334,7 @@ class SaveFlashCardView(APIView):
 
     def post(self, request, pk):
         flashcard = get_object_or_404(
-            active_flashcards(), 
+            accessible_flashcards(request.user), 
             pk=pk, 
         )
         playlist_id = request.data.get("playlist_id")
@@ -321,7 +360,7 @@ class SaveFlashCardView(APIView):
 
     def delete(self, request, pk):
         flashcard = get_object_or_404(
-            active_flashcards(),
+            accessible_flashcards(request.user),
             pk=pk
         )
 
@@ -344,7 +383,7 @@ class FlashcardFeedbackView(APIView):
 
     def post(self, request, pk):
         flashcard = get_object_or_404(
-            active_flashcards(),
+            accessible_flashcards(request.user),
             pk=pk
         )
         serializer = FlashcardFeedbackSerializer(data=request.data)
@@ -544,7 +583,7 @@ class FlashcardUnderstoodView(APIView):
 
     def post(self, request, pk):
         flashcard = get_object_or_404(
-            active_flashcards(),
+            accessible_flashcards(request.user),
             pk=pk
         )
         understood = request.data.get("understood", True)

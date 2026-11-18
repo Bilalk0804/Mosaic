@@ -47,6 +47,11 @@ export default function ProcessingStatusScreen({ route, navigation }: any) {
       <Text style={{ marginVertical: 10, fontSize: 16 }}>
         Status: <Text style={{ fontWeight: 'bold' }}>{note?.status || 'Loading...'}</Text>
       </Text>
+      {note?.status === 'verified' ? (
+        <Text style={{ marginBottom: 10 }}>
+          Processing is complete. Flashcards are created only from supported claims. Open View Claims to see the claims extracted from this note.
+        </Text>
+      ) : null}
       {note?.processing_error ? (
         <Text style={{ color: 'red', marginBottom: 10 }}>Error: {note.processing_error}</Text>
       ) : null}
@@ -55,7 +60,7 @@ export default function ProcessingStatusScreen({ route, navigation }: any) {
       </Text>
       <Button title="Refresh Status" onPress={fetchStatus} />
       <View style={{ marginTop: 10 }}>
-        <Button title="View Claims" onPress={() => navigation.navigate('ClaimReview')} />
+        <Button title="View Claims" onPress={() => navigation.navigate('ClaimReview', { noteId })} />
       </View>
       </> : null}
     </View>

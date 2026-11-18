@@ -64,10 +64,10 @@ export default function PlaylistModal({ route, navigation }: any) {
         <View className="flex-1 bg-canvas p-5">
             <View className="mb-4">
                 <Text className="text-xl font-bold text-slate-50">
-                    {flashcardId ? 'Save to Playlist' : 'Your Playlists'}
+                    {flashcardId != null ? 'Save to Playlist' : 'Your Playlists'}
                 </Text>
                 <Text className="mt-1 text-xs text-slate-400">
-                    {flashcardId
+                    {flashcardId != null
                         ? 'Select a playlist to store this flashcard for future review.'
                         : 'Manage your study lists and tap any playlist to review its saved cards.'}
                 </Text>
@@ -95,7 +95,7 @@ export default function PlaylistModal({ route, navigation }: any) {
                     <Card className="active:border-sky-500/50 active:bg-slate-900">
                         <Pressable
                             onPress={() => {
-                                if (!flashcardId) {
+                                if (flashcardId == null) {
                                     navigation.navigate('PlaylistDetail', {
                                         playlistId: item.id,
                                         playlistName: item.name,
@@ -113,10 +113,10 @@ export default function PlaylistModal({ route, navigation }: any) {
                                     {item.item_count ?? 0} saved cards
                                 </Text>
                             </View>
-                            {!flashcardId && <ChevronRight size={20} color="#64748b" />}
+                            {flashcardId == null && <ChevronRight size={20} color="#64748b" />}
                         </Pressable>
 
-                        {flashcardId && (
+                        {flashcardId != null && (
                             <View className="mt-3.5 flex-row gap-2.5 pt-3 border-t border-slate-800">
                                 <Button
                                     size="sm"

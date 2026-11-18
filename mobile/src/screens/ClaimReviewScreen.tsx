@@ -3,12 +3,13 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, Button, Alert } from 'react-native';
 import { getExtractedClaims, verifyClaim } from '@/api/notes';
 
-export default function ClaimReviewScreen() {
+export default function ClaimReviewScreen({ route }: any) {
+    const { noteId } = route.params;
     const [claims, setClaims] = useState<any[]>([]);
 
     const loadClaims = async () => {
         try {
-            const data = await getExtractedClaims();
+            const data = await getExtractedClaims(noteId);
             setClaims(data.results || data);
         } catch (err: any) {
             Alert.alert('Error', JSON.stringify(err.response?.data || err.message));
@@ -17,7 +18,7 @@ export default function ClaimReviewScreen() {
 
     useEffect(() => {
         loadClaims();
-    }, []);
+    }, [noteId]);
 
     const handleVerify = async (id: number) => {
         try {

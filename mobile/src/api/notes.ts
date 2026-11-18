@@ -11,8 +11,7 @@ export const uploadNote = async (title: string, fileUri: string, fileName: strin
     } as any);
 
     return (await apiClient.post('/api/notes/upload/', formData, {
-        // Overrides apiClient's JSON default; Axios/RN supplies the boundary.
-        headers: { 'Content-Type': 'multipart/form-data' },
+        // Leave Content-Type unset so React Native/Axios can add the multipart boundary.
         timeout: 120000,
     })).data;
 };
@@ -21,8 +20,8 @@ export const getNoteStatus = async (noteId: number) => {
     return (await apiClient.get(`/api/notes/${noteId}/`)).data;
 };
 
-export const getExtractedClaims = async () => {
-    return (await apiClient.get('/api/knowledge/extracted-claims/')).data;
+export const getExtractedClaims = async (noteId: number) => {
+    return (await apiClient.get(`/api/notes/${noteId}/claims/`)).data;
 };
 
 export const verifyClaim = async (claimId: number) => {

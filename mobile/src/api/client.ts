@@ -14,7 +14,6 @@ console.log('[API] BASE_URL:', BASE_URL);
 export const apiClient = axios.create({
     baseURL: BASE_URL,
     headers: {
-        'Content-Type': 'application/json',
         Accept: 'application/json',
     },
     // Keep auth failures prompt; large multipart uploads override this per request.

@@ -125,7 +125,7 @@ export const CardShell: React.FC<CardShellProps> = ({
                     )}
                 </View>
                 <View style={styles.actionRight}>
-                    {card.canonical_claim_id && onOpenExplain && (
+                    {card.canonical_claim_id != null && onOpenExplain && (
                         <TouchableOpacity
                             activeOpacity={0.75}
                             onPress={onOpenExplain}

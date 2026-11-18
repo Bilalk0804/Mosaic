@@ -63,7 +63,7 @@ export default function SearchScreen({ navigation }: any) {
                     Taxonomy Concept: {result.taxonomy_match.name}
                   </Text>
                 </View>
-                {result.taxonomy_match.confidence && (
+                {result.taxonomy_match.confidence != null && (
                   <Badge variant="success">
                     {Math.round(result.taxonomy_match.confidence * 100)}% match
                   </Badge>
