@@ -280,12 +280,15 @@ class DeferredVerificationTests(TestCase):
             callback()
         delay.assert_called_once_with(result["canonical_claim"].id)
 
+    @patch("config.task_dispatch.run_in_background")
     @patch("learning.tasks.generate_flashcard_for_claim_task.delay", side_effect=ConnectionError("broker down"))
-    def test_broker_failure_does_not_fail_verification(self, _delay, concept_service):
+    def test_broker_failure_does_not_fail_verification(self, _delay, run_in_background, concept_service):
         concept_service.return_value.assign_concept.return_value = self.concept
         with self.captureOnCommitCallbacks(execute=True):
             result = ClaimVerificationService().verify_claim(self._claim(), defer_flashcard=True)
         self.assertTrue(CanonicalClaim.objects.filter(pk=result["canonical_claim"].pk).exists())
+        run_in_background.assert_called_once()
+        self.assertEqual(run_in_background.call_args.args[1], result["canonical_claim"].id)
 
     def test_same_fact_from_two_sources_yields_one_card(self, concept_service):
         concept_service.return_value.assign_concept.return_value = self.concept

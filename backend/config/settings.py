@@ -83,6 +83,8 @@ CELERY_TASK_TRACK_STARTED = True
 CELERY_BROKER_CONNECTION_TIMEOUT = 3
 CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_connect_timeout": 3, "socket_timeout": 5}
 CELERY_REDIS_SOCKET_CONNECT_TIMEOUT = 3
+# Nothing reads task results; storing them makes every dispatch depend on the result backend.
+CELERY_TASK_IGNORE_RESULT = True
 CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_REJECT_ON_WORKER_LOST = True
 CELERY_TASK_ALWAYS_EAGER = env("CELERY_TASK_ALWAYS_EAGER", "False") == "True"

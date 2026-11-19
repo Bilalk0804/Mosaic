@@ -1,6 +1,7 @@
 from knowledge.models import Evidence, Source
 from django.db import transaction
 from knowledge.tasks import embed_evidence_task
+from config.task_dispatch import dispatch
 
 class EvidenceRetrievalService:
     def retrieve_for_claim(self, extracted_claim):
@@ -25,9 +26,7 @@ class EvidenceRetrievalService:
         )
 
         transaction.on_commit(
-            lambda evidence_id=evidence.id: embed_evidence_task.delay(
-                evidence_id,
-            )
+            lambda evidence_id=evidence.id: dispatch(embed_evidence_task, evidence_id)
         )
         return [evidence]
 

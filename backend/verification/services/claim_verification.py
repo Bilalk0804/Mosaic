@@ -18,13 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 def dispatch_flashcard_generation(canonical_claim_id: int) -> None:
-    """Enqueue card generation; a broker failure is logged, and the periodic
-    learning.backfill_missing_flashcards sweep picks the claim up later."""
+    """Enqueue card generation; without a broker it runs in a background thread."""
+    from config.task_dispatch import dispatch
     from learning.tasks import generate_flashcard_for_claim_task
-    try:
-        generate_flashcard_for_claim_task.delay(canonical_claim_id)
-    except Exception:
-        logger.exception("flashcard.dispatch.failed canonical_claim=%s (backfill sweep will retry)", canonical_claim_id)
+    dispatch(generate_flashcard_for_claim_task, canonical_claim_id)
 
 class ClaimVerificationService:
     def __init__(self):
