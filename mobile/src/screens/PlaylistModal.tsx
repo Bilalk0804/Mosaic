@@ -2,7 +2,10 @@
 // Playlists manager: allows creating playlists, saving/unsaving flashcards,
 // and tapping a playlist to browse its saved cards.
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, Alert, Pressable } from 'react-native';
+import { View, Text, FlatList, Pressable } from 'react-native';
+import { notify } from '@/utils/notify';
+
+const Alert = { alert: notify };
 import { ChevronRight, FolderPlus, ListMusic } from 'lucide-react-native';
 import { getPlaylists, createPlaylist, saveFlashcard, unsaveFlashcard } from '@/api/learning';
 import { Badge, Button, Card, CardTitle, Input } from '@/components/ui';

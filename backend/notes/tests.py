@@ -135,28 +135,3 @@ class NotePermissionTests(APITestCase):
         self.assertEqual(other_response.status_code, status.HTTP_404_NOT_FOUND)
         verify.assert_called_once_with(own_claim)
 
-    def test_user_can_only_verify_claims_from_their_own_note(self):
-        own_note = Note.objects.create(owner=self.user, title='Mine', file='notes/mine.txt')
-        other_note = Note.objects.create(owner=self.other_user, title='Other', file='notes/other.txt')
-        own_document = SourceDocument.objects.create(title='Mine', uploaded_note=own_note)
-        other_document = SourceDocument.objects.create(title='Other', uploaded_note=other_note)
-        own_claim = ExtractedClaim.objects.create(source_document=own_document, text='My claim')
-        other_claim = ExtractedClaim.objects.create(source_document=other_document, text='Other claim')
-        self.client.force_authenticate(user=self.user)
-
-        with patch('verification.views.ClaimVerificationService.verify_claim') as verify:
-            verify.return_value = {
-                'claim': own_claim,
-                'canonical_claim': None,
-                'confidence': own_claim.confidence,
-                'evidence': [],
-                'flashcard': None,
-            }
-            own_response = self.client.post(f'/api/verification/claims/{own_claim.id}/verify/')
-            other_response = self.client.post(f'/api/verification/claims/{other_claim.id}/verify/')
-
-        self.assertEqual(own_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(other_response.status_code, status.HTTP_404_NOT_FOUND)
-        verify.assert_called_once_with(own_claim)
-
-    

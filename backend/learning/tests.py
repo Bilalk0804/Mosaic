@@ -802,3 +802,31 @@ class PersonalFlashcardEnvironmentTests(APITestCase):
         )
         self.assertEqual(feedback_resp.status_code, status.HTTP_404_NOT_FOUND)
 
+    def test_topic_search_does_not_leak_other_users_personal_cards(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/learning/search/", {"topic": "Merge Sort"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        card_ids = [card["id"] for card in response.data["results"]]
+        self.assertIn(self.public_card.id, card_ids)
+        self.assertIn(self.personal_card_user1.id, card_ids)
+        self.assertNotIn(self.personal_card_user2.id, card_ids)
+
+    def test_topic_search_matches_keywords_inside_card_text(self):
+        git_card = Flashcard.objects.create(
+            title="Computer Science & Engineering",
+            prompt="Which command uploads local commits?",
+            answer="git push sends local commits to a remote repository.",
+            explanation="Version control.",
+            difficulty=Flashcard.DIFFICULTY_BEGINNER,
+            card_type=Flashcard.CARD_TYPE_RECALL,
+            environment=Flashcard.ENVIRONMENT_PUBLIC,
+            is_active=True,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get("/api/learning/search/", {"topic": "git"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        card_ids = [card["id"] for card in response.data["results"]]
+        self.assertIn(git_card.id, card_ids)
+        self.assertNotIn(self.public_card.id, card_ids)
+        self.assertEqual(response.data["keyword_match_count"], 1)
+

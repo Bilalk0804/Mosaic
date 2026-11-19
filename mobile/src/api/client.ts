@@ -1,6 +1,6 @@
 // Axios instance + JWT refresh interceptor
 import axios, {AxiosError, InternalAxiosRequestConfig} from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { deleteStoredItem, getStoredItem, setStoredItem } from './tokenStore';
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
 
@@ -33,7 +33,7 @@ apiClient.interceptors.request.use(
         try {
             const accessToken = isPublicAuthRequest(config.url)
                 ? null
-                : await SecureStore.getItemAsync('accessToken');
+                : await getStoredItem('accessToken');
             if (accessToken && config.headers) {
                 config.headers.Authorization = `Bearer ${accessToken}`;
             }
@@ -58,7 +58,7 @@ apiClient.interceptors.response.use(
             !isPublicAuthRequest(originalRequest.url)) {
             originalRequest._retry = true;
             try {
-                const refreshToken = await SecureStore.getItemAsync('refreshToken');
+                const refreshToken = await getStoredItem('refreshToken');
                 if (!refreshToken) {
                     throw new Error('No refresh token available');
                 }
@@ -68,18 +68,18 @@ apiClient.interceptors.response.use(
                 }, { timeout: 15000 });
                 
                 const newAccessToken = refreshResponse.data.access;
-                await SecureStore.setItemAsync('accessToken', newAccessToken);
+                await setStoredItem('accessToken', newAccessToken);
 
                 if (refreshResponse.data.refresh) {
-                    await SecureStore.setItemAsync('refreshToken', refreshResponse.data.refresh);
+                    await setStoredItem('refreshToken', refreshResponse.data.refresh);
                 }
                 if (originalRequest.headers) {
                     originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
                 }
                 return apiClient(originalRequest);
             } catch (refreshError) {
-                await SecureStore.deleteItemAsync('accessToken');
-                await SecureStore.deleteItemAsync('refreshToken');
+                await deleteStoredItem('accessToken');
+                await deleteStoredItem('refreshToken');
                 console.error('[API Client] Token refresh failed', refreshError);
                 return Promise.reject(refreshError);
             }

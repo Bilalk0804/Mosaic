@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
     topBar: {
         paddingTop: 8,
         paddingBottom: 12,
+        paddingRight: 56,
     },
     badgeRow: {
         flexDirection: 'row',

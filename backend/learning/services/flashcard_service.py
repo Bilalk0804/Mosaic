@@ -9,6 +9,21 @@ from learning.models import Flashcard
 
 logger = logging.getLogger(__name__)
 
+
+def environment_for_extracted_claim(extracted_claim):
+    """Personal cards belong to the user who uploaded the source note.
+
+    Notes store that user on ``owner``. External evidence has no uploaded note
+    and stays on the public feed.
+    """
+    document = getattr(extracted_claim, "source_document", None) if extracted_claim is not None else None
+    note = getattr(document, "uploaded_note", None) if document is not None else None
+    owner = getattr(note, "owner", None) if note is not None else None
+    if owner is not None:
+        return Flashcard.ENVIRONMENT_PERSONAL, owner
+    return Flashcard.ENVIRONMENT_PUBLIC, None
+
+
 class FlashcardGenerationService:
     def generate_from_canonical_claim(self, canonical_claim, environment=Flashcard.ENVIRONMENT_PUBLIC, owner=None):
         """

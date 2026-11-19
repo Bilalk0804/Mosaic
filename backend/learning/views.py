@@ -203,10 +203,30 @@ class TopicSearchView(APIView):
         if not query:
             return Response({"detail": "A topic query is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        cards_for_user = accessible_flashcards(request.user)
+        # Concepts are broad (e.g. "Computer Science & Engineering"), so a topic like
+        # "git" usually lives in card and claim text rather than in a concept name.
+        keyword_cards = list(
+            cards_for_user.filter(
+                Q(title__icontains=query)
+                | Q(prompt__icontains=query)
+                | Q(answer__icontains=query)
+                | Q(source_claim__text__icontains=query)
+            ).order_by("-created_at")[:30]
+        )
+
+        def results_for(concept_cards):
+            merged, seen = [], set()
+            for card in [*keyword_cards, *concept_cards]:
+                if card.id not in seen:
+                    seen.add(card.id)
+                    merged.append(card)
+            return FlashcardSerializer(merged[:30], many=True, context={"request": request}).data
+
         # 1. Exact match (case-insensitive)
         exact = Concept.objects.filter(name__iexact=query).first()
         if exact:
-            cards = active_flashcards().filter(source_claim__concept=exact)
+            cards = cards_for_user.filter(source_claim__concept=exact)[:30]
             return Response({
                 "query": query,
                 "taxonomy_match": {
@@ -217,7 +237,8 @@ class TopicSearchView(APIView):
                     "name": exact.name,
                 },
                 "suggestions": [{"concept_id": exact.id, "name": exact.name, "score": 1.0}],
-                "results": FlashcardSerializer(cards[:30], many=True, context={"request": request}).data,
+                "keyword_match_count": len(keyword_cards),
+                "results": results_for(cards),
             })
 
         # 2. Substring & Trigram/Fuzzy matching
@@ -242,7 +263,9 @@ class TopicSearchView(APIView):
             target_name = best_concept_dict["name"]
             is_confident = best_score >= 0.70
 
-            cards = active_flashcards().filter(source_claim__concept_id=target_id)
+            # A weak fuzzy match is only a suggestion; do not fill results with an
+            # unrelated concept's cards.
+            cards = cards_for_user.filter(source_claim__concept_id=target_id)[:30] if is_confident else []
             suggestions = [
                 {"concept_id": item[1]["id"], "name": item[1]["name"], "score": round(item[0], 2)}
                 for item in top_matches
@@ -258,10 +281,11 @@ class TopicSearchView(APIView):
                     "name": target_name,
                 },
                 "suggestions": suggestions,
-                "results": FlashcardSerializer(cards[:30], many=True, context={"request": request}).data,
+                "keyword_match_count": len(keyword_cards),
+                "results": results_for(cards),
             })
 
-        # 3. No match found
+        # 3. No concept match; keyword matches may still exist
         return Response({
             "query": query,
             "taxonomy_match": {
@@ -272,7 +296,8 @@ class TopicSearchView(APIView):
                 "name": None,
             },
             "suggestions": [],
-            "results": [],
+            "keyword_match_count": len(keyword_cards),
+            "results": results_for([]),
         })
 
     
